@@ -3,452 +3,580 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>智能学习平台 </title>
+<title>凌云逐竞算法平台</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   .loader { animation: spin 1s linear infinite; }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   .heat-item { width: 18px; height: 18px; border-radius: 4px; transition: 0.2s; }
-  .card { transition: all 0.2s; }
-  .card:hover { transform: translateY(-2px); }
-  .character { transition: transform 0.2s; }
-  .character:hover { transform: scale(1.1); }
+  .card { transition: all 0.3s ease; backdrop-filter: blur(8px); }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.1); }
+  .character { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); cursor: pointer; }
+  .character:hover { transform: scale(1.2); }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  .text-quote-light { color: #4b5563; }
+  .text-quote-dark { color: #cbd5e1; }
 </style>
 </head>
-<body class="bg-gray-100 transition-all" id="body">
+<body class="bg-gray-100 transition-all duration-300" id="body">
 
 <div id="loading" class="fixed inset-0 flex items-center justify-center bg-white z-50">
-  <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full loader"></div>
+  <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full loader"></div>
 </div>
 
-<!-- 顶部导航栏 -->
-<nav class="sticky top-0 bg-white dark:bg-gray-800 shadow z-40">
-  <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-    <div class="text-lg font-bold text-blue-600 dark:text-blue-400">🎯 智能学习平台</div>
-    <div class="flex items-center gap-2 md:gap-4">
-      <button onclick="setTab('recommend')" class="text-sm px-2 py-1 rounded dark:text-white">题库</button>
-      <button onclick="setTab('tasks')" class="text-sm px-2 py-1 rounded dark:text-white">任务</button>
-      <button onclick="setTab('wrong')" class="text-sm px-2 py-1 rounded dark:text-white">错题</button>
-      <button onclick="setTab('dashboard')" class="text-sm px-2 py-1 rounded dark:text-white">分析</button>
-      <button onclick="toggleDark()" class="p-2 text-sm rounded-full bg-gray-100 dark:bg-gray-700 dark:text-white">
-        切换模式
+<div id="loginModal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex items-center justify-center">
+  <div class="bg-white/95 dark:bg-gray-800/95 w-full max-w-md p-10 rounded-3xl shadow-2xl m-4 relative overflow-hidden border border-gray-200 dark:border-gray-700">
+    <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+    <div class="text-center mb-8">
+      <div class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">凌云逐竞算法平台</div>
+      <div class="text-sm text-gray-500 dark:text-gray-400">深耕算法 · 逐梦竞赛 · 高效刷题</div>
+    </div>
+    <div class="space-y-5 mb-7">
+      <input 
+        id="loginUser" 
+        placeholder="请输入用户名" 
+        class="w-full px-4 py-3.5 bg-gray-100/80 dark:bg-gray-700/80 border-0 rounded-xl outline-none transition-all focus:ring-2 focus:ring-indigo-400 dark:text-white"
+      >
+      <input 
+        id="loginPwd" 
+        type="password" 
+        placeholder="请输入密码" 
+        class="w-full px-4 py-3.5 bg-gray-100/80 dark:bg-gray-700/80 border-0 rounded-xl outline-none transition-all focus:ring-2 focus:ring-indigo-400 dark:text-white"
+      >
+    </div>
+    <div class="flex gap-4 mb-6">
+      <button onclick="userLogin()" class="flex-1 py-3.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-medium rounded-xl transition-all shadow-lg shadow-indigo-500/25">
+        立即登录
       </button>
+      <button onclick="userRegister()" class="flex-1 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-medium rounded-xl transition-all shadow-lg shadow-teal-500/25">
+        注册账号
+      </button>
+    </div>
+    <div id="loginMsg" class="h-5 text-sm text-center text-red-500"></div>
+  </div>
+</div>
+
+
+<div id="problemModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center">
+  <div class="bg-white/95 dark:bg-gray-800/95 w-full max-w-3xl max-h-[80vh] overflow-auto p-6 rounded-2xl m-4 border border-gray-200 dark:border-gray-700">
+    <div id="problemDetail"></div>
+    <button onclick="closeProblem()" class="mt-4 w-full bg-gray-200/80 dark:bg-gray-700/80 p-3 rounded-xl transition-all">关闭</button>
+  </div>
+</div>
+
+
+<nav class="sticky top-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md shadow-md z-40">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+    <div class="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">🎯 凌云逐竞算法平台</div>
+    <div class="flex items-center gap-2 md:gap-3">
+      <button onclick="setTab('recommend')" class="text-sm px-3 py-1.5 rounded-md dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-all">题库</button>
+      <button onclick="setTab('tasks')" class="text-sm px-3 py-1.5 rounded-md dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-all">任务</button>
+      <button onclick="setTab('wrong')" class="text-sm px-3 py-1.5 rounded-md dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-all">错题</button>
+      <button onclick="setTab('dashboard')" class="text-sm px-3 py-1.5 rounded-md dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-all">分析</button>
+      <button onclick="setTab('admin')" class="text-sm px-3 py-1.5 rounded-md dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-all hidden" id="adminBtn">管理</button>
+      <button onclick="toggleDark()" class="p-2 text-sm rounded-full bg-gray-100 dark:bg-gray-700 dark:text-white transition-all">🌙</button>
+      <button onclick="logout()" class="text-sm px-3 py-1.5 rounded-md bg-red-100 text-red-600 hidden transition-all" id="logoutBtn">退出</button>
     </div>
   </div>
 </nav>
 
-<!-- 左侧快捷 OJ 栏 -->
-<div class="fixed left-0 top-16 bottom-0 w-44 bg-white dark:bg-gray-800 shadow-md p-3 z-30 hidden md:block overflow-y-auto">
-  <div class="text-sm font-bold mb-3 text-gray-600 dark:text-gray-300">🔗 快速刷题入口</div>
+
+<div class="fixed left-0 top-16 bottom-0 w-48 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-md p-4 z-30 hidden md:block overflow-y-auto border-r border-gray-200 dark:border-gray-700">
+  <div class="text-sm font-bold mb-3 text-gray-600 dark:text-gray-300">🔗 竞赛 OJ 快速入口</div>
   <div class="space-y-2">
-    <a href="https://leetcode.cn" target="_blank" class="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white">
-      <span>📘</span>力扣 LeetCode
-    </a>
-    <a href="https://www.nowcoder.com" target="_blank" class="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white">
-      <span>⚔️</span>牛客 OJ
-    </a>
-    <a href="https://codeforces.com" target="_blank" class="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white">
-      <span>⚡</span>Codeforces
-    </a>
-    <a href="https://atcoder.jp" target="_blank" class="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white">
-      <span>🔥</span>AtCoder
-    </a>
-    <a href="https://www.lanqiao.cn" target="_blank" class="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white">
-      <span>🔵</span>蓝桥云课
-    </a>
-    <a href="https://www.luogu.com.cn" target="_blank" class="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white">
-      <span>📕</span>洛谷
-    </a>
+    <a href="https://leetcode.cn" target="_blank" class="flex items-center gap-2 p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white transition-all"><span>📘</span>力扣 LeetCode</a>
+    <a href="https://www.nowcoder.com" target="_blank" class="flex items-center gap-2 p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white transition-all"><span>⚔️</span>牛客 OJ</a>
+    <a href="https://codeforces.com" target="_blank" class="flex items-center gap-2 p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white transition-all"><span>⚡</span>Codeforces</a>
+    <a href="https://atcoder.jp" target="_blank" class="flex items-center gap-2 p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white transition-all"><span>🔥</span>AtCoder</a>
+    <a href="https://www.lanqiao.cn" target="_blank" class="flex items-center gap-2 p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white transition-all"><span>🔵</span>蓝桥云课</a>
+    <a href="https://www.luogu.com.cn" target="_blank" class="flex items-center gap-2 p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm dark:text-white transition-all"><span>📕</span>洛谷</a>
   </div>
 
-  <!-- 卡通励志人物 -->
-  <div class="mt-6 pt-4 border-t dark:border-gray-700">
-    <div class="text-xs font-medium text-center text-gray-500 dark:text-gray-400 mb-2">点击加油 ✨</div>
-    <div onclick="showQuote()" class="character text-center text-2xl cursor-pointer">
-      🐧
-    </div>
-    <div id="quoteBox" class="mt-2 text-xs text-center text-gray-600 dark:text-gray-300 min-h-[40px]"></div>
+  
+  <div class="mt-6 pt-5 border-t dark:border-gray-700">
+    <div class="text-xs text-center text-gray-500 dark:text-gray-400 mb-3">点击人物 · 励志寄语</div>
+    <div onclick="showQuote()" class="character text-center text-3xl mb-3 select-none">🐧</div>
+    <div id="quoteBox" class="text-sm leading-relaxed text-center min-h-[56px] px-2 text-quote-light dark:text-quote-dark"></div>
   </div>
 
-  <!-- 各大OJ竞赛Rating量化分数（填满侧边栏） -->
-  <div class="mt-6 pt-4 border-t dark:border-gray-700">
-    <div class="text-xs font-bold mb-3 text-gray-600 dark:text-gray-300">📊 竞赛 Rating 量化</div>
-    
-    <div class="space-y-3 text-xs">
-      <div>
-        <div class="flex justify-between mb-1">
-          <span>力扣</span>
-          <span class="font-bold text-orange-500">1680</span>
-        </div>
-        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-          <div class="bg-orange-400 h-1.5 rounded-full" style="width: 65%"></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="flex justify-between mb-1">
-          <span>牛客</span>
-          <span class="font-bold text-purple-500">2120</span>
-        </div>
-        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-          <div class="bg-purple-400 h-1.5 rounded-full" style="width: 72%"></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="flex justify-between mb-1">
-          <span>CF</span>
-          <span class="font-bold text-blue-500">1350</span>
-        </div>
-        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-          <div class="bg-blue-400 h-1.5 rounded-full" style="width: 55%"></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="flex justify-between mb-1">
-          <span>AtCoder</span>
-          <span class="font-bold text-green-500">900</span>
-        </div>
-        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-          <div class="bg-green-400 h-1.5 rounded-full" style="width: 40%"></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="flex justify-between mb-1">
-          <span>蓝桥杯</span>
-          <span class="font-bold text-blue-400">省级二等奖</span>
-        </div>
-        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-          <div class="bg-blue-500 h-1.5 rounded-full" style="width: 60%"></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="flex justify-between mb-1">
-          <span>洛谷</span>
-          <span class="font-bold text-yellow-500">6.2 分</span>
-        </div>
-        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-          <div class="bg-yellow-400 h-1.5 rounded-full" style="width: 62%"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="text-xs text-gray-400 mt-6 pt-2 border-t dark:border-gray-700">
-    一键跳转专业 OJ 平台
+  <div class="mt-6 pt-4 border-t dark:border-gray-700 text-xs text-gray-400 text-center pb-2">
+    <div id="userInfo" class="font-medium text-indigo-500 mb-1">未登录</div>
+    专注算法 · 备战竞赛
   </div>
 </div>
 
-<!-- 主内容区（左边距适配侧边栏） -->
-<div id="root" class="pt-4 md:ml-44"></div>
+
+<div id="root" class="pt-4 md:ml-48"></div>
 
 <script>
-/* ================== 励志诗句库（5句循环） ================== */
-const quotes = [
+
+const quoteQueue = [
   "追风赶月莫停留，平芜尽处是春山",
   "路漫漫其修远兮，吾将上下而求索",
   "不经一番寒彻骨，怎得梅花扑鼻香",
   "长风破浪会有时，直挂云帆济沧海",
   "博观而约取，厚积而薄发"
 ];
-let quoteIndex = 0;
 
-/* ================== 显示诗句 ================== */
+
 function showQuote() {
-  const box = document.getElementById('quoteBox');
-  box.innerText = quotes[quoteIndex];
-  quoteIndex = (quoteIndex + 1) % quotes.length;
+  if(quoteQueue.length === 0) return;
+  const curr = quoteQueue.shift();
+  document.getElementById('quoteBox').innerText = curr;
+  quoteQueue.push(curr);
 }
 
-/* ================== 本地存储 ================== */
+
+const User = {
+  getUsers(){return JSON.parse(localStorage.getItem('users')||'{}')},
+  register(user,pwd){
+    let u=this.getUsers();
+    if(u[user])return false;
+    u[user]={password:pwd};
+    localStorage.setItem('users',JSON.stringify(u));
+    localStorage.setItem('currentUser',user);
+    return true;
+  },
+  login(user,pwd){
+    let u=this.getUsers();
+    if(u[user]&&u[user].password===pwd){
+      localStorage.setItem('currentUser',user);
+      return true;
+    }
+    return false;
+  },
+  current(){return localStorage.getItem('currentUser')||""},
+  logout(){localStorage.removeItem('currentUser');location.reload();}
+};
+
+
 const Storage = {
-  save: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
-  load: (k) => JSON.parse(localStorage.getItem(k) || "null")
+  getKey(){return `study_${User.current()}`},
+  save(val){
+    if(!User.current()) return;
+    localStorage.setItem(this.getKey(),JSON.stringify(val));
+  },
+  load(){
+    if(!User.current()) return null;
+    const res = localStorage.getItem(this.getKey());
+    return res ? JSON.parse(res) : null;
+  }
 };
 
 const today = new Date().toDateString();
-
-/* ================== 初始化状态 ================== */
-let state = Storage.load('studyState') || {};
-state = {
-  dark: false, lastCheckDate: "", streak: 0, checkedIn: false,
-  finished: [], wrongList: [], starList: [], studyTime: 0,
-  activeTab: "recommend", heat: Array.from({ length: 30 }, () => 0),
-  tasks: [], taskInput: "", ...state
+const defaultState = {
+  dark:false,lastCheckDate:"",streak:0,checkedIn:false,
+  finished:[],wrongList:[],starList:[],studyTime:0,
+  activeTab:"recommend",heat:Array(30).fill(0),tasks:[],
+  taskInput:"",filter:{keyword:"",difficulty:0,tag:""},
+  todayCount:0,page:1
 };
+let state = Storage.load() || {};
+state = {...defaultState,...state};
 
-/* ================== 每日重置 ================== */
-if (state.lastCheckDate !== today) {
+
+if(state.lastCheckDate !== today){
   state.checkedIn = false;
   state.lastCheckDate = today;
+  state.todayCount = 0;
+  state.heat.shift();
+  state.heat.push(0);
   save();
 }
 
-/* ================== 50道算法题库 ================== */
+
 const fullData = [
-  { title: "数组区间和", difficulty: 1, url: "https://www.luogu.com.cn/problem/P3374", tags: ["数组"] },
-  { title: "DFS迷宫", difficulty: 2, url: "https://www.luogu.com.cn/problem/P1605", tags: ["DFS"] },
-  { title: "最短路", difficulty: 3, url: "https://www.luogu.com.cn/problem/P4779", tags: ["图论"] },
-  { title: "背包问题", difficulty: 3, url: "https://www.luogu.com.cn/problem/P1048", tags: ["DP"] },
-  { title: "单调队列", difficulty: 2, url: "https://www.luogu.com.cn/problem/P1886", tags: ["队列"] },
-  { title: "并查集", difficulty: 2, url: "https://www.luogu.com.cn/problem/P3367", tags: ["图论"] },
-  { title: "快速排序", difficulty: 2, url: "https://www.luogu.com.cn/problem/P1177", tags: ["排序"] },
-  { title: "二分查找", difficulty: 1, url: "https://www.luogu.com.cn/problem/P2249", tags: ["二分"] },
-  { title: "前缀和", difficulty: 1, url: "https://www.luogu.com.cn/problem/P1115", tags: ["数组"] },
-  { title: "差分", difficulty: 2, url: "https://www.luogu.com.cn/problem/P2367", tags: ["数组"] },
-  { title: "BFS广度优先", difficulty: 2, url: "https://www.luogu.com.cn/problem/P1443", tags: ["BFS"] },
-  { title: "拓扑排序", difficulty: 3, url: "https://www.luogu.com.cn/problem/P1983", tags: ["图论"] },
-  { title: "最小生成树", difficulty: 3, url: "https://www.luogu.com.cn/problem/P3366", tags: ["图论"] },
-  { title: "LCA最近公共祖先", difficulty: 3, url: "https://www.luogu.com.cn/problem/P3379", tags: ["树"] },
-  { title: "线段树", difficulty: 3, url: "https://www.luogu.com.cn/problem/P3372", tags: ["数据结构"] },
-  { title: "树状数组2", difficulty: 3, url: "https://www.luogu.com.cn/problem/P3368", tags: ["数据结构"] },
-  { title: "哈希表", difficulty: 2, url: "https://www.luogu.com.cn/problem/P3370", tags: ["字符串"] },
-  { title: "KMP字符串", difficulty: 3, url: "https://www.luogu.com.cn/problem/P3375", tags: ["字符串"] },
-  { title: "贪心", difficulty: 2, url: "https://www.luogu.com.cn/problem/P1090", tags: ["贪心"] },
-  { title: "分治", difficulty: 2, url: "https://www.luogu.com.cn/problem/P1226", tags: ["数学"] },
-  { title: "高精度加法", difficulty: 2, url: "https://www.luogu.com.cn/problem/P1601", tags: ["高精度"] },
-  { title: "高精度乘法", difficulty: 2, url: "https://www.luogu.com.cn/problem/P1303", tags: ["高精度"] },
-  { title: "质数筛", difficulty: 2, url: "https://www.luogu.com.cn/problem/P3383", tags: ["数学"] },
-  { title: "快速幂", difficulty: 2, url: "https://www.luogu.com.cn/problem/P1226", tags: ["数学"] },
-  { title: "最长上升子序列", difficulty: 3, url: "https://www.luogu.com.cn/problem/P1020", tags: ["DP"] },
-  { title: "最长公共子序列", difficulty: 3, url: "https://www.luogu.com.cn/problem/P1439", tags: ["DP"] },
-  { title: "区间DP", difficulty: 3, url: "https://www.luogu.com.cn/problem/P1880", tags: ["DP"] },
-  { title: "数位DP", difficulty: 4, url: "https://www.luogu.com.cn/problem/P2657", tags: ["DP"] },
-  { title: "状压DP", difficulty: 4, url: "https://www.luogu.com.cn/problem/P1879", tags: ["DP"] },
-  { title: "树形DP", difficulty: 4, url: "https://www.luogu.com.cn/problem/P1352", tags: ["DP"] },
-  { title: "双指针", difficulty: 2, url: "https://www.luogu.com.cn/problem/P1102", tags: ["双指针"] },
-  { title: "滑动窗口", difficulty: 2, url: "https://www.luogu.com.cn/problem/P1886", tags: ["滑动窗口"] },
-  { title: "离线处理", difficulty: 3, url: "https://www.luogu.com.cn/problem/P1972", tags: ["算法"] },
-  { title: "莫队算法", difficulty: 4, url: "https://www.luogu.com.cn/problem/P3901", tags: ["算法"] },
-  { title: "CDQ分治", difficulty: 4, url: "https://www.luogu.com.cn/problem/P3810", tags: ["算法"] },
-  { title: "矩阵快速幂", difficulty: 3, url: "https://www.luogu.com.cn/problem/P3390", tags: ["数学"] },
-  { title: "高斯消元", difficulty: 3, url: "https://www.luogu.com.cn/problem/P3389", tags: ["数学"] },
-  { title: "组合数学", difficulty: 3, url: "https://www.luogu.com.cn/problem/P2822", tags: ["数学"] },
-  { title: "博弈论", difficulty: 3, url: "https://www.luogu.com.cn/problem/P2148", tags: ["数学"] },
-  { title: "Tarjan强连通", difficulty: 3, url: "https://www.luogu.com.cn/problem/P2863", tags: ["图论"] },
-  { title: "割点割边", difficulty: 3, url: "https://www.luogu.com.cn/problem/P3388", tags: ["图论"] },
-  { title: "2-SAT", difficulty: 4, url: "https://www.luogu.com.cn/problem/P4782", tags: ["图论"] },
-  { title: "差分约束", difficulty: 3, url: "https://www.luogu.com.cn/problem/P5960", tags: ["图论"] },
-  { title: "欧拉路径", difficulty: 3, url: "https://www.luogu.com.cn/problem/P7771", tags: ["图论"] },
-  { title: "基环树", difficulty: 3, url: "https://www.luogu.com.cn/problem/P6037", tags: ["树"] },
-  { title: "主席树", difficulty: 4, url: "https://www.luogu.com.cn/problem/P3834", tags: ["数据结构"] },
-  { title: "平衡树", difficulty: 4, url: "https://www.luogu.com.cn/problem/P3369", tags: ["数据结构"] },
-  { title: "后缀数组", difficulty: 4, url: "https://www.luogu.com.cn/problem/P3809", tags: ["字符串"] },
-  { title: "AC自动机", difficulty: 4, url: "https://www.luogu.com.cn/problem/P3808", tags: ["字符串"] },
-  { title: "马拉车算法", difficulty: 3, url: "https://www.luogu.com.cn/problem/P3805", tags: ["字符串"] }
+  {title:"数组区间和",difficulty:1,url:"https://www.luogu.com.cn/problem/P3374",tags:["数组"],content:"求区间和，支持单点修改"},
+  {title:"DFS迷宫",difficulty:2,url:"https://www.luogu.com.cn/problem/P1605",tags:["DFS"],content:"迷宫最短路径搜索"},
+  {title:"最短路Dijkstra",difficulty:3,url:"https://www.luogu.com.cn/problem/P4779",tags:["图论"],content:"单源最短路模板"},
+  {title:"01背包",difficulty:3,url:"https://www.luogu.com.cn/problem/P1048",tags:["DP"],content:"经典动态规划"},
+  {title:"单调队列",difficulty:2,url:"https://www.luogu.com.cn/problem/P1886",tags:["队列"],content:"滑动窗口最大值"},
+  {title:"并查集",difficulty:2,url:"https://www.luogu.com.cn/problem/P3367",tags:["图论"],content:"集合合并与查询"},
+  {title:"快速排序",difficulty:2,url:"https://www.luogu.com.cn/problem/P1177",tags:["排序"],content:"经典排序算法"},
+  {title:"二分查找",difficulty:1,url:"https://www.luogu.com.cn/problem/P2249",tags:["二分"],content:"有序数组查找"},
+  {title:"前缀和",difficulty:1,url:"https://www.luogu.com.cn/problem/P1115",tags:["数组"],content:"最大子段和"},
+  {title:"差分",difficulty:2,url:"https://www.luogu.com.cn/problem/P2367",tags:["数组"],content:"区间修改模板"},
+  {title:"BFS广度优先",difficulty:2,url:"https://www.luogu.com.cn/problem/P1443",tags:["BFS"],content:"图的层序遍历"},
+  {title:"拓扑排序",difficulty:3,url:"https://www.luogu.com.cn/problem/P1983",tags:["图论"],content:"有向无环图排序"},
+  {title:"最小生成树",difficulty:3,url:"https://www.luogu.com.cn/problem/P3366",tags:["图论"],content:"Kruskal模板"},
+  {title:"LCA最近公共祖先",difficulty:3,url:"https://www.luogu.com.cn/problem/P3379",tags:["树"],content:"树上倍增模板"},
+  {title:"线段树基础",difficulty:3,url:"https://www.luogu.com.cn/problem/P3372",tags:["数据结构"],content:"区间修改查询"},
+  {title:"树状数组进阶",difficulty:3,url:"https://www.luogu.com.cn/problem/P3368",tags:["数据结构"],content:"区间更新"},
+  {title:"字符串哈希",difficulty:2,url:"https://www.luogu.com.cn/problem/P3370",tags:["字符串"],content:"字符串判重"},
+  {title:"KMP匹配",difficulty:3,url:"https://www.luogu.com.cn/problem/P3375",tags:["字符串"],content:"模式匹配"},
+  {title:"贪心算法",difficulty:2,url:"https://www.luogu.com.cn/problem/P1090",tags:["贪心"],content:"合并果子"},
+  {title:"快速幂",difficulty:2,url:"https://www.luogu.com.cn/problem/P1226",tags:["数学"],content:"快速幂取模"},
+  {title:"高精度加法",difficulty:2,url:"https://www.luogu.com.cn/problem/P1601",tags:["高精度"],content:"大整数加法"},
+  {title:"高精度乘法",difficulty:2,url:"https://www.luogu.com.cn/problem/P1303",tags:["高精度"],content:"大整数乘法"},
+  {title:"质数筛法",difficulty:2,url:"https://www.luogu.com.cn/problem/P3383",tags:["数学"],content:"线性筛素数"},
+  {title:"最长上升子序列",difficulty:3,url:"https://www.luogu.com.cn/problem/P1020",tags:["DP"],content:"LIS模板"},
+  {title:"最长公共子序列",difficulty:3,url:"https://www.luogu.com.cn/problem/P1439",tags:["DP"],content:"LCS模板"},
+  {title:"区间DP",difficulty:3,url:"https://www.luogu.com.cn/problem/P1880",tags:["DP"],content:"石子合并"},
+  {title:"状压DP",difficulty:4,url:"https://www.luogu.com.cn/problem/P1879",tags:["DP"],content:"状态压缩DP"},
+  {title:"树形DP",difficulty:4,url:"https://www.luogu.com.cn/problem/P1352",tags:["DP"],content:"树上DP"},
+  {title:"双指针",difficulty:2,url:"https://www.luogu.com.cn/problem/P1102",tags:["双指针"],content:"数组双指针"},
+  {title:"滑动窗口",difficulty:2,url:"https://www.luogu.com.cn/problem/P1886",tags:["滑动窗口"],content:"窗口极值"},
+  {title:"Tarjan强连通",difficulty:3,url:"https://www.luogu.com.cn/problem/P2863",tags:["图论"],content:"强连通分量"},
+  {title:"割点割边",difficulty:3,url:"https://www.luogu.com.cn/problem/P3388",tags:["图论"],content:"图的割点"},
+  {title:"欧拉路径",difficulty:3,url:"https://www.luogu.com.cn/problem/P7771",tags:["图论"],content:"欧拉通路"},
+  {title:"基环树",difficulty:3,url:"https://www.luogu.com.cn/problem/P6037",tags:["树"],content:"基环树DP"},
+  {title:"主席树",difficulty:4,url:"https://www.luogu.com.cn/problem/P3834",tags:["数据结构"],content:"可持久化线段树"},
+  {title:"平衡树",difficulty:4,url:"https://www.luogu.com.cn/problem/P3369",tags:["数据结构"],content:"FHQTreap"},
+  {title:"后缀数组",difficulty:4,url:"https://www.luogu.com.cn/problem/P3809",tags:["字符串"],content:"SA模板"},
+  {title:"AC自动机",difficulty:4,url:"https://www.luogu.com.cn/problem/P3808",tags:["字符串"],content:"多模式匹配"},
+  {title:"马拉车算法",difficulty:3,url:"https://www.luogu.com.cn/problem/P3805",tags:["字符串"],content:"最长回文子串"},
+  {title:"矩阵快速幂",difficulty:3,url:"https://www.luogu.com.cn/problem/P3390",tags:["数学"],content:"矩阵加速"},
+  {title:"高斯消元",difficulty:3,url:"https://www.luogu.com.cn/problem/P3389",tags:["数学"],content:"线性方程组"},
+  {title:"组合数学",difficulty:3,url:"https://www.luogu.com.cn/problem/P2822",tags:["数学"],content:"组合数取模"},
+  {title:"博弈论Nim",difficulty:3,url:"https://www.luogu.com.cn/problem/P2148",tags:["数学"],content:"尼姆博弈"},
+  {title:"2-SAT",difficulty:4,url:"https://www.luogu.com.cn/problem/P4782",tags:["图论"],content:"逻辑判定"},
+  {title:"差分约束",difficulty:3,url:"https://www.luogu.com.cn/problem/P5960",tags:["图论"],content:"不等式组"},
+  {title:"莫队算法",difficulty:4,url:"https://www.luogu.com.cn/problem/P3901",tags:["算法"],content:"区间询问优化"},
+  {title:"CDQ分治",difficulty:4,url:"https://www.luogu.com.cn/problem/P3810",tags:["算法"],content:"分治优化"},
+  {title:"离线处理",difficulty:3,url:"https://www.luogu.com.cn/problem/P1972",tags:["算法"],content:"离线区间查询"},
+  {title:"数位DP",difficulty:4,url:"https://www.luogu.com.cn/problem/P2657",tags:["DP"],content:"数位统计"},
+  {title:"最短路SPFA",difficulty:3,url:"https://www.luogu.com.cn/problem/P3385",tags:["图论"],content:"队列优化BellmanFord"},
+  {title:"最小费用流",difficulty:4,url:"https://www.luogu.com.cn/problem/P3381",tags:["图论"],content:"费用流模板"},
+  {title:"二分图匹配",difficulty:3,url:"https://www.luogu.com.cn/problem/P3386",tags:["图论"],content:"最大匹配"},
+  {title:"点分治",difficulty:4,url:"https://www.luogu.com.cn/problem/P3806",tags:["树"],content:"树上路径统计"},
+  {title:"树链剖分",difficulty:4,url:"https://www.luogu.com.cn/problem/P3384",tags:["树"],content:"树链剖分"},
+  {title:"线性基",difficulty:4,url:"https://www.luogu.com.cn/problem/P3812",tags:["数学"],content:"异或线性基"},
+  {title:"多项式乘法FFT",difficulty:4,url:"https://www.luogu.com.cn/problem/P3803",tags:["数学"],content:"FFT"},
+  {title:"莫比乌斯反演",difficulty:4,url:"https://www.luogu.com.cn/problem/P3455",tags:["数学"],content:"数论分块"},
+  {title:"后缀自动机SAM",difficulty:4,url:"https://www.luogu.com.cn/problem/P3804",tags:["字符串"],content:"SAM"},
+  {title:"回文自动机PAM",difficulty:4,url:"https://www.luogu.com.cn/problem/P5496",tags:["字符串"],content:"PAM"},
+  {title:"分块算法",difficulty:3,url:"https://www.luogu.com.cn/problem/P2801",tags:["数据结构"],content:"块状数组"},
+  {title:"可持久化并查集",difficulty:4,url:"https://www.luogu.com.cn/problem/P3402",tags:["数据结构"],content:"可持久化DSU"}
 ];
 
-/* ================== 智能推荐 ================== */
-function getRecommend() {
-  return [...fullData].map(p => {
-    let score = 0;
-    if (!state.finished.includes(p.url)) score += 3;
-    if (state.wrongList.includes(p.url)) score += 5;
-    score += (4 - p.difficulty);
-    return { ...p, score };
-  }).sort((a, b) => b.score - a.score).slice(0, 3);
-}
 
-/* ================== 工具 ================== */
-function calcAcc() {
-  const t = state.finished.length, w = state.wrongList.length;
-  return t ? Math.round((t - w) / t * 100) : 0;
+function calcAcc(){
+  const total = state.finished.length;
+  const wrong = state.wrongList.length;
+  return total ? Math.round((total - wrong) / total * 100) : 0;
 }
-
-function getAchievement() {
+function getAchievement(){
   const n = state.finished.length;
-  if (n >= 30) return "🏅 算法大神";
-  if (n >= 20) return "🥇 金牌选手";
-  if (n >= 10) return "🥈 银牌选手";
-  return "🌱 新手入门";
+  if(n>=30) return"🏅算法大神";
+  if(n>=20) return"🥇金牌选手";
+  if(n>=10) return"🥈银牌选手";
+  return"🌱新手入门";
+}
+function getFiltered(){
+  let list = fullData;
+  if(state.filter.keyword) list = list.filter(x=>x.title.includes(state.filter.keyword)||x.tags.some(t=>t.includes(state.filter.keyword)));
+  if(state.filter.difficulty>0) list = list.filter(x=>x.difficulty===state.filter.difficulty);
+  if(state.filter.tag) list = list.filter(x=>x.tags.includes(state.filter.tag));
+  return list;
 }
 
-/* ================== 渲染 ================== */
-function render() {
-  document.getElementById("body").className = state.dark 
-    ? "bg-gray-900 text-white dark:text-white" 
-    : "bg-gray-100";
-  
-  const rec = getRecommend(), acc = calcAcc(), ach = getAchievement();
 
-  root.innerHTML = `
+function render(){
+  if(!User.current()){
+    document.getElementById('loginModal').classList.remove('hidden');
+  }else{
+    document.getElementById('loginModal').classList.add('hidden');
+  }
+
+  document.getElementById('body').className = state.dark ? "bg-gray-900 text-white" : "bg-gray-100";
+  document.getElementById('userInfo').innerText = User.current() || "未登录";
+  document.getElementById('adminBtn').classList.toggle('hidden',User.current()!=='admin');
+  document.getElementById('logoutBtn').classList.toggle('hidden',!User.current());
+
+  const rec = getFiltered().filter(x=>!state.finished.includes(x.url)).slice(0,3);
+  const acc = calcAcc(),ach = getAchievement();
+
+  root.innerHTML=`
   <div class="max-w-5xl mx-auto p-4 space-y-4">
-    <h1 class="text-2xl font-bold">🎯 智能学习平台 </h1>
+    <h1 class="text-2xl font-bold">🎯 凌云逐竞算法平台</h1>
 
-    <!-- 打卡卡片 -->
-    <div class="card bg-white dark:bg-gray-800 p-6 rounded-xl shadow flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+
+    <div class="card bg-white/90 dark:bg-gray-800/90 p-6 rounded-xl shadow flex flex-col md:flex-row md:justify-between md:items-center gap-4 border border-gray-200 dark:border-gray-700">
       <div class="space-y-2">
-        <div class="text-lg font-semibold text-blue-600 dark:text-blue-400">🏅 学习打卡</div>
+        <div class="text-lg font-semibold text-indigo-600 dark:text-indigo-400">🏅 每日学习打卡</div>
         <div class="flex items-center gap-3 text-sm">
-          <span>连续打卡 <b class="text-blue-600 dark:text-blue-400">${state.streak}</b> 天</span>
+          <span>连续 <b class="text-indigo-600">${state.streak}</b> 天</span>
           <span>|</span>
           <span>${ach}</span>
-        </div>
-        <div class="text-xs text-blue-500 dark:text-blue-300 italic">
-          ${state.streak === 0 ? "🌱 今日还未打卡" : state.streak < 7 ? "💪 坚持学习！" : "🔥 太自律了！"}
+          <span>|</span>
+          <span>今日 ${state.todayCount} 题</span>
         </div>
       </div>
-      <button onclick="checkIn()" class="px-5 py-2 rounded-lg text-white font-medium ${state.checkedIn ? 'bg-green-500' : 'bg-blue-500'}">
-        ${state.checkedIn ? '✅ 今日已打卡' : '📅 点击打卡'}
+      <button onclick="checkIn()" class="px-5 py-2.5 rounded-lg text-white font-medium transition-all ${state.checkedIn?'bg-green-500':'bg-indigo-500'} shadow-lg">
+        ${state.checkedIn?'✅ 已打卡':'📅 点击打卡'}
       </button>
     </div>
 
-    <!-- 统计 -->
-    <div class="grid grid-cols-3 gap-3">
-      <div class="card bg-white dark:bg-gray-800 p-4 rounded-xl shadow text-center">
-        <div class="text-sm text-gray-500 dark:text-gray-300">已完成</div>
+    <!-- 数据统计 -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="card bg-white/90 dark:bg-gray-800/90 p-4 rounded-xl shadow text-center border border-gray-200 dark:border-gray-700">
+        <div class="text-sm text-gray-500 dark:text-gray-400">已完成</div>
         <div class="text-xl font-bold">${state.finished.length}</div>
       </div>
-      <div class="card bg-white dark:bg-gray-800 p-4 rounded-xl shadow text-center">
-        <div class="text-sm text-gray-500 dark:text-gray-300">错题</div>
+      <div class="card bg-white/90 dark:bg-gray-800/90 p-4 rounded-xl shadow text-center border border-gray-200 dark:border-gray-700">
+        <div class="text-sm text-gray-500 dark:text-gray-400">错题</div>
         <div class="text-xl font-bold">${state.wrongList.length}</div>
       </div>
-      <div class="card bg-white dark:bg-gray-800 p-4 rounded-xl shadow text-center">
-        <div class="text-sm text-gray-500 dark:text-gray-300">正确率</div>
+      <div class="card bg-white/90 dark:bg-gray-800/90 p-4 rounded-xl shadow text-center border border-gray-200 dark:border-gray-700">
+        <div class="text-sm text-gray-500 dark:text-gray-400">正确率</div>
         <div class="text-xl font-bold">${acc}%</div>
+      </div>
+      <div class="card bg-white/90 dark:bg-gray-800/90 p-4 rounded-xl shadow text-center border border-gray-200 dark:border-gray-700">
+        <div class="text-sm text-gray-500 dark:text-gray-400">学习时长</div>
+        <div class="text-xl font-bold">${Math.floor(state.studyTime/60)}m</div>
       </div>
     </div>
 
-    <!-- 推荐 -->
-    <div class="card bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
-      <div class="font-bold mb-3">🔥 智能推荐</div>
-      ${rec.map(p => `
+
+    <div class="card bg-white/90 dark:bg-gray-800/90 p-4 rounded-xl shadow border border-gray-200 dark:border-gray-700">
+      <div class="font-bold mb-3">🔥 智能刷题推荐</div>
+      ${rec.map(p=>`
         <div class="flex justify-between py-2 border-b dark:border-gray-700">
           <span>${p.title}</span>
-          <a href="${p.url}" target="_blank" class="text-blue-500 dark:text-blue-400">去做题</a>
+          <button onclick="openProblem('${p.url}')" class="text-indigo-500">查看</button>
         </div>
       `).join('')}
     </div>
 
-    <!-- 热力图 -->
-    <div class="card bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
-      <div class="font-bold mb-3">🔥 30天学习热力图</div>
-      <div class="flex flex-wrap gap-1">
-        ${state.heat.map(v => `<div class="heat-item" style="background:hsl(120,60%,${90 - v * 15}%)"></div>`).join('')}
-      </div>
-    </div>
-
-    <!-- 标签 -->
-    <div class="grid grid-cols-4 gap-2 bg-white dark:bg-gray-800 p-2 rounded-xl">
-      <button onclick="setTab('recommend')" class="py-2 rounded ${state.activeTab === 'recommend' ? 'bg-gray-100 dark:bg-gray-700' : ''}">题库</button>
-      <button onclick="setTab('tasks')" class="py-2 rounded ${state.activeTab === 'tasks' ? 'bg-gray-100 dark:bg-gray-700' : ''}">任务</button>
-      <button onclick="setTab('wrong')" class="py-2 rounded ${state.activeTab === 'wrong' ? 'bg-gray-100 dark:bg-gray-700' : ''}">错题</button>
-      <button onclick="setTab('dashboard')" class="py-2 rounded ${state.activeTab === 'dashboard' ? 'bg-gray-100 dark:bg-gray-700' : ''}">分析</button>
+  
+    <div class="grid grid-cols-4 gap-2 bg-white/90 dark:bg-gray-800/90 p-2 rounded-xl border border-gray-200 dark:border-gray-700">
+      <button onclick="setTab('recommend')" class="py-2 rounded-lg transition-all ${state.activeTab==='recommend'?'bg-gray-100 dark:bg-gray-700':''}">题库</button>
+      <button onclick="setTab('tasks')" class="py-2 rounded-lg transition-all ${state.activeTab==='tasks'?'bg-gray-100 dark:bg-gray-700':''}">任务</button>
+      <button onclick="setTab('wrong')" class="py-2 rounded-lg transition-all ${state.activeTab==='wrong'?'bg-gray-100 dark:bg-gray-700':''}">错题</button>
+      <button onclick="setTab('dashboard')" class="py-2 rounded-lg transition-all ${state.activeTab==='dashboard'?'bg-gray-100 dark:bg-gray-700':''}">分析</button>
     </div>
 
     <div>${renderTab()}</div>
   </div>`;
 }
 
-/* ================== 标签页 ================== */
-function renderTab() {
-  if (state.activeTab === 'recommend') {
-    return `<div class="card bg-white dark:bg-gray-800 p-4 rounded-xl shadow space-y-3 max-h-[500px] overflow-y-auto">
-      ${fullData.map(p => `
-        <div class="p-3 border rounded-lg dark:border-gray-700">
-          <div class="font-bold">${p.title}</div>
-          <div class="text-xs text-gray-500 dark:text-gray-400">#${p.tags[0]}</div>
-          <div class="text-sm ${p.difficulty===1?'text-green-500 dark:text-green-400':p.difficulty===2?'text-yellow-500 dark:text-yellow-400':'text-red-500 dark:text-red-400'}">难度 ${p.difficulty}</div>
-          <div class="flex gap-3 mt-2 text-sm flex-wrap">
-            <a href="${p.url}" target="_blank" class="text-blue-500 dark:text-blue-400">做题</a>
-            <button onclick="toggleFinish('${p.url}')" class="${state.finished.includes(p.url)?"text-green-600 dark:text-green-400":"text-gray-400 dark:text-gray-500"}">完成</button>
-            <button onclick="toggleWrong('${p.url}')" class="${state.wrongList.includes(p.url)?"text-red-600 dark:text-red-400":"text-gray-400 dark:text-gray-500"}">错题</button>
-            <button onclick="toggleStar('${p.url}')" class="${(state.starList||[]).includes(p.url)?"text-yellow-600 dark:text-yellow-400":"text-gray-400 dark:text-gray-500"}">收藏</button>
+/* 标签页渲染 */
+function renderTab(){
+  if(state.activeTab==='recommend'){
+    return `<div class="card bg-white/90 dark:bg-gray-800/90 p-4 rounded-xl shadow border border-gray-200 dark:border-gray-700">
+      <div class="flex flex-wrap gap-2 mb-3">
+        <input placeholder="搜索题目/标签" oninput="state.filter.keyword=this.value;save()" class="flex-1 p-2.5 border-0 rounded-lg bg-gray-100 dark:bg-gray-700">
+        <select onchange="state.filter.difficulty=Number(this.value);save()" class="p-2.5 border-0 rounded-lg bg-gray-100 dark:bg-gray-700">
+          <option value="0">全部难度</option>
+          <option value="1">简单</option>
+          <option value="2">中等</option>
+          <option value="3">困难</option>
+          <option value="4">高阶</option>
+        </select>
+      </div>
+      <div class="space-y-3 max-h-[500px] overflow-y-auto">
+        ${getFiltered().map(p=>`
+          <div class="p-3 border rounded-lg dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20">
+            <div class="font-bold">${p.title}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">#${p.tags[0]}</div>
+            <div class="text-sm ${p.difficulty===1?'text-green-500':p.difficulty===2?'text-yellow-500':p.difficulty===3?'text-orange-500':'text-red-500'}">难度 ${p.difficulty}</div>
+            <div class="flex gap-3 mt-2 text-sm flex-wrap">
+              <button onclick="openProblem('${p.url}')" class="text-indigo-500">详情</button>
+              <button onclick="toggleFinish('${p.url}')" class="${state.finished.includes(p.url)?"text-green-600":"text-gray-400"}">完成</button>
+              <button onclick="toggleWrong('${p.url}')" class="${state.wrongList.includes(p.url)?"text-red-600":"text-gray-400"}">错题</button>
+              <button onclick="toggleStar('${p.url}')" class="${(state.starList||[]).includes(p.url)?"text-yellow-600":"text-gray-400"}">收藏</button>
+            </div>
           </div>
-        </div>
-      `).join('')}</div>`;
+        `).join('')}
+      </div>
+    </div>`;
   }
 
-  if (state.activeTab === 'tasks') {
-    return `
-    <div class="card bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
+  if(state.activeTab==='tasks'){
+    return `<div class="card bg-white/90 dark:bg-gray-800/90 p-4 rounded-xl shadow border border-gray-200 dark:border-gray-700">
       <div class="flex gap-2 mb-3">
-        <input id="taskInput" value="${state.taskInput}" oninput="state.taskInput=this.value" placeholder="输入任务" class="flex-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-        <button onclick="addTask()" class="px-3 py-2 bg-blue-500 text-white rounded-lg">添加</button>
+        <input id="taskInput" value="${state.taskInput}" oninput="state.taskInput=this.value" placeholder="输入算法学习任务" class="flex-1 p-2.5 border-0 rounded-lg bg-gray-100 dark:bg-gray-700">
+        <button onclick="addTask()" class="px-3 py-2.5 bg-indigo-500 text-white rounded-lg shadow">添加</button>
       </div>
       <div class="space-y-2">
         ${state.tasks.map((t,i)=>`
-          <label class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <label class="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <input type="checkbox" ${t.done?"checked":""} onchange="toggleTask(${i})">
-            <span class="${t.done?"line-through text-gray-400 dark:text-gray-500":""}">${t.text}</span>
+            <span class="${t.done?"line-through text-gray-400":""}">${t.text}</span>
           </label>
         `).join('')}
       </div>
     </div>`;
   }
 
-  if (state.activeTab === 'wrong') {
-    return `
-    <div class="card bg-white dark:bg-gray-800 p-4 rounded-xl shadow space-y-4">
-      <div><div class="font-bold mb-2">📕 错题本</div>
-        ${fullData.filter(p=>state.wrongList.includes(p.url)).map(p=>`<div class="p-2 bg-red-50 dark:bg-red-900/30 rounded-lg mb-1">${p.title}</div>`).join('')}
+  if(state.activeTab==='wrong'){
+    return `<div class="card bg-white/90 dark:bg-gray-800/90 p-4 rounded-xl shadow space-y-4 border border-gray-200 dark:border-gray-700">
+      <div>
+        <div class="font-bold mb-2">📕 错题本</div>
+        ${fullData.filter(p=>state.wrongList.includes(p.url)).map(p=>`
+          <div class="p-2.5 bg-red-50 dark:bg-red-900/30 rounded-lg mb-1 flex justify-between">
+            <span>${p.title}</span>
+            <button onclick="redoWrong('${p.url}')" class="text-xs bg-green-500 text-white px-2 py-1 rounded">已掌握</button>
+          </div>
+        `).join('')}
       </div>
-      <div><div class="font-bold mb-2">⭐ 收藏</div>
-        ${fullData.filter(p=>(state.starList||[]).includes(p.url)).map(p=>`<div class="p-2 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg mb-1">${p.title}</div>`).join('')}
+      <div>
+        <div class="font-bold mb-2">⭐ 收藏题库</div>
+        ${fullData.filter(p=>(state.starList||[]).includes(p.url)).map(p=>`<div class="p-2.5 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg mb-1">${p.title}</div>`).join('')}
       </div>
     </div>`;
   }
 
-  if (state.activeTab === 'dashboard') {
-    return `
-    <div class="card bg-white dark:bg-gray-800 p-4 rounded-xl shadow space-y-4">
-      <div class="text-sm bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
-        📊 学习建议：${calcAcc()<60?"基础薄弱，多练基础题":calcAcc()<85?"稳步提升":"掌握良好，挑战难题"}
+  if(state.activeTab==='dashboard'){
+    return `<div class="card bg-white/90 dark:bg-gray-800/90 p-4 rounded-xl shadow space-y-4 border border-gray-200 dark:border-gray-700">
+      <div class="text-sm bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg">
+        📊 学习建议：${calcAcc()<60?"基础薄弱，优先练习简单中等题":calcAcc()<85?"稳步提升，强化模板与思维":"基础扎实，冲刺高阶竞赛题目"}
       </div>
-      <div class="text-center">总题量：50 题 | 已刷：${state.finished.length}</div>
+      <div class="h-64"><canvas id="chart"></canvas></div>
+      <div class="text-center">总题库：${fullData.length} 道 | 已完成：${state.finished.length} 道</div>
+    </div>`;
+  }
+
+  if(state.activeTab==='admin'){
+    return `<div class="card bg-white/90 dark:bg-gray-800/90 p-4 rounded-xl shadow border border-gray-200 dark:border-gray-700">
+      <div class="font-bold mb-3">管理员后台 - 题目管理</div>
+      <input id="newTitle" placeholder="题目标题" class="w-full p-2.5 mb-2 border-0 rounded-lg bg-gray-100 dark:bg-gray-700">
+      <input id="newContent" placeholder="题目描述" class="w-full p-2.5 mb-2 border-0 rounded-lg bg-gray-100 dark:bg-gray-700">
+      <button onclick="addProblem()" class="bg-indigo-500 text-white p-2.5 rounded-lg w-full shadow">添加自定义题目</button>
     </div>`;
   }
   return "";
 }
 
-/* ================== 功能 ================== */
-function setTab(t){ state.activeTab = t; save(); }
-function toggleDark(){ state.dark = !state.dark; save(); }
 
+function setTab(t){state.activeTab=t;save();}
+function toggleDark(){state.dark=!state.dark;save();}
+
+// 打卡 重复拦截
 function checkIn(){
   if(state.checkedIn) return;
-  state.checkedIn = true; state.streak++;
-  state.heat.shift(); state.heat.push(Math.min(4, state.finished.length%5));
+  state.checkedIn = true;
+  state.streak += 1;
+  state.heat.shift();
+  state.heat.push(1);
   save();
 }
 
-function toggleFinish(u){
-  state.finished = state.finished.includes(u) ? state.finished.filter(x=>x!==u) : [...state.finished,u];
+
+function toggleFinish(url){
+  if(state.finished.includes(url)){
+    state.finished = state.finished.filter(x=>x!==url);
+  }else{
+    state.finished.push(url);
+    state.todayCount += 1;
+  }
   save();
 }
 
-function toggleWrong(u){
-  state.wrongList = state.wrongList.includes(u) ? state.wrongList.filter(x=>x!==u) : [...state.wrongList,u];
+
+function toggleWrong(url){
+  if(state.wrongList.includes(url)){
+    state.wrongList = state.wrongList.filter(x=>x!==url);
+  }else{
+    state.wrongList.push(url);
+  }
   save();
 }
 
-function toggleStar(u){
+
+function toggleStar(url){
   if(!state.starList) state.starList = [];
-  state.starList = state.starList.includes(u) ? state.starList.filter(x=>x!==u) : [...state.starList,u];
+  if(state.starList.includes(url)){
+    state.starList = state.starList.filter(x=>x!==url);
+  }else{
+    state.starList.push(url);
+  }
   save();
 }
 
 function addTask(){
   if(!state.taskInput.trim()) return;
-  state.tasks.push({text:state.taskInput,done:false}); state.taskInput=""; save();
+  state.tasks.push({text:state.taskInput.trim(),done:false});
+  state.taskInput = "";
+  save();
+}
+function toggleTask(i){state.tasks[i].done=!state.tasks[i].done;save();}
+function redoWrong(url){state.wrongList=state.wrongList.filter(x=>x!==url);save();}
+
+
+function userLogin(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPwd').value.trim();
+  if(!u||!p){
+    document.getElementById('loginMsg').innerText="账号密码不能为空";
+    return;
+  }
+  if(User.login(u,p)){save();render();}
+  else{document.getElementById('loginMsg').innerText="账号或密码错误";}
+}
+function userRegister(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPwd').value.trim();
+  if(!u||!p){
+    document.getElementById('loginMsg').innerText="账号密码不能为空";
+    return;
+  }
+  if(User.register(u,p)){save();render();}
+  else{document.getElementById('loginMsg').innerText="用户名已存在";}
+}
+function logout(){User.logout();}
+
+function openProblem(url){
+  const p = fullData.find(x=>x.url===url);
+  document.getElementById('problemDetail').innerHTML=`
+    <div class="font-bold text-lg">${p.title}</div>
+    <div class="my-2 text-sm">难度 ${p.difficulty} | ${p.tags[0]}</div>
+    <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">${p.content}</div>
+    <a href="${p.url}" target="_blank" class="inline-block mt-3 text-indigo-500">前往原题链接</a>
+  `;
+  document.getElementById('problemModal').classList.remove('hidden');
+}
+function closeProblem(){document.getElementById('problemModal').classList.add('hidden');}
+function addProblem(){
+  const t=document.getElementById('newTitle').value;
+  const c=document.getElementById('newContent').value;
+  if(!t||!c)return;
+  fullData.push({title:t,difficulty:2,url:"#",tags:["自定义"],content:c});
+  save();render();
 }
 
-function toggleTask(i){
-  state.tasks[i].done = !state.tasks[i].done; save();
+
+function save(){Storage.save(state);render();setTimeout(drawChart,100);}
+function drawChart(){
+  const ctx=document.getElementById('chart');
+  if(!ctx)return;
+  new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:Array.from({length:30},(_,i)=>i+1),
+      datasets:[{
+        label:'30天学习热度',
+        data:state.heat,
+        borderColor:'#6366f1',
+        backgroundColor:'#6366f133',
+        tension:0.4,fill:true
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false}
+  });
 }
 
-function save(){
-  Storage.save("studyState",state); render();
-}
 
-/* ================== 启动 ================== */
+setInterval(()=>{
+  if(User.current()){
+    state.studyTime = (state.studyTime||0)+1;
+    Storage.save(state);
+  }
+},60000);
+
+
 setTimeout(()=>{
-  document.getElementById("loading").style.display="none";
+  document.getElementById('loading').style.display='none';
   render();
-},300);
+  
+  if(quoteQueue.length>0){
+    document.getElementById('quoteBox').innerText = quoteQueue[0];
+  }
+},400);
 </script>
 </body>
 </html>
